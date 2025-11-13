@@ -1,0 +1,11 @@
+include README.md
+include LICENSE
+include requirements.txt
+include pyproject.toml
+recursive-include ibook_reader *.py
+recursive-exclude tests *
+recursive-exclude .qoder *
+exclude manual_test.py
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .DS_Store

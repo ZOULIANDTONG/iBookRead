@@ -135,7 +135,7 @@ class EpubParser(BaseParser):
         """
         try:
             # 使用 BeautifulSoup 解析 HTML
-            soup = BeautifulSoup(html_content, 'lxml')
+            soup = BeautifulSoup(html_content, 'xml')
             
             # 移除 script 和 style 标签
             for script in soup(['script', 'style']):
@@ -165,7 +165,7 @@ class EpubParser(BaseParser):
             章节标题
         """
         try:
-            soup = BeautifulSoup(html_content, 'lxml')
+            soup = BeautifulSoup(html_content, 'xml')
             
             # 尝试查找标题标签
             for tag in ['h1', 'h2', 'h3']:
