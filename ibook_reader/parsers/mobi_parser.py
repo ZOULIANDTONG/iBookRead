@@ -112,13 +112,26 @@ class MobiParser(BaseParser):
                 script.decompose()
             
             # 获取文本
-            text = soup.get_text()
+            text = soup.get_text(separator='\n')
             
-            # 清理空白字符
+            # 清理空白字符，但保留换行
             lines = [line.strip() for line in text.splitlines()]
-            lines = [line for line in lines if line]
+            # 去除完全空白的行
+            lines = [line if line else '' for line in lines]
             
-            return '\n\n'.join(lines)
+            # 合并连续的空行
+            result = []
+            prev_empty = False
+            for line in lines:
+                if line == '':
+                    if not prev_empty:
+                        result.append('')
+                    prev_empty = True
+                else:
+                    result.append(line)
+                    prev_empty = False
+            
+            return '\n'.join(result)
             
         except Exception:
             # 如果解析失败，使用简单的文本提取
