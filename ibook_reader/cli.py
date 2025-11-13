@@ -45,6 +45,33 @@ def main():
         help='重置密码'
     )
     
+    parser.add_argument(
+        '--ui',
+        action='store_true',
+        help='使用交互式UI模式（默认为纯文本模式）'
+    )
+    
+    parser.add_argument(
+        '--page',
+        type=int,
+        metavar='N',
+        help='跳转到指定页码（仅UI模式）'
+    )
+    
+    parser.add_argument(
+        '--chapter',
+        type=int,
+        metavar='N',
+        help='跳转到指定章节（仅UI模式）'
+    )
+    
+    parser.add_argument(
+        '--percent',
+        type=float,
+        metavar='N',
+        help='跳转到指定百分比进度（0-100，仅UI模式）'
+    )
+    
     args = parser.parse_args()
     
     # 处理清理数据命令
@@ -75,7 +102,22 @@ def main():
     
     # 启动阅读器
     try:
-        return start_reader(file_path)
+        if args.ui:
+            # 构建跳转选项
+            jump_options = {}
+            if args.page is not None:
+                jump_options['page'] = args.page
+            if args.chapter is not None:
+                jump_options['chapter'] = args.chapter
+            if args.percent is not None:
+                jump_options['percent'] = args.percent
+            
+            return start_reader(file_path, jump_options)
+        else:
+            # 纯文本模式不支持跳转
+            if args.page or args.chapter or args.percent:
+                rprint("[yellow]警告：跳转参数仅在 --ui 模式下有效[/yellow]")
+            return plain_text_mode(file_path)
     except KeyboardInterrupt:
         rprint("\n[yellow]已中断[/yellow]")
         return 0
@@ -86,8 +128,8 @@ def main():
         return 1
 
 
-def start_reader(file_path: Path) -> int:
-    """启动阅读器
+def plain_text_mode(file_path: Path) -> int:
+    """纯文本输出模式（默认模式，不需要密码验证）
     
     Args:
         file_path: 文档文件路径
@@ -95,7 +137,91 @@ def start_reader(file_path: Path) -> int:
     Returns:
         退出码
     """
+    from .parsers.factory import ParserFactory
+    import subprocess
+    import sys
+    import shutil
+    
+    # 1. 创建解析器
+    rprint(f"[cyan]正在加载文档: {file_path.name}...[/cyan]")
+    parser = ParserFactory.create_parser(file_path)
+    if parser is None:
+        rprint(f"[red]无法解析文档格式: {file_path}[/red]")
+        return 1
+    
+    # 2. 解析文档
+    try:
+        document = parser.parse()
+    except Exception as e:
+        rprint(f"[red]解析文档失败: {e}[/red]")
+        return 1
+    
+    # 3. 输出文档信息
+    rprint(f"\n[green]✓ 文档加载成功[/green]")
+    rprint(f"[bold cyan]标题:[/bold cyan] {document.title}")
+    if document.author:
+        rprint(f"[bold cyan]作者:[/bold cyan] {document.author}")
+    rprint(f"[bold cyan]章节数:[/bold cyan] {document.total_chapters}")
+    rprint(f"\n{'=' * 80}\n")
+    
+    # 4. 输出所有章节内容
+    content_lines = []
+    for chapter in document.chapters:
+        # 章节标题
+        content_lines.append(f"\n{'=' * 80}")
+        content_lines.append(f"{chapter.title}")
+        content_lines.append(f"{'=' * 80}\n")
+        
+        # 章节内容
+        content_lines.append(chapter.content)
+        
+        # 章节分隔
+        if chapter.index < document.total_chapters - 1:
+            content_lines.append("")
+    
+    full_content = '\n'.join(content_lines)
+    
+    # 5. 检查是否是管道输出或重定向
+    if not sys.stdout.isatty():
+        # 管道或重定向，直接输出
+        print(full_content)
+    else:
+        # 终端输出，使用分页器
+        pager = shutil.which('less') or shutil.which('more')
+        
+        if pager:
+            try:
+                # 使用 less 或 more 进行分页显示
+                process = subprocess.Popen(
+                    [pager, '-R'],  # -R 支持颜色
+                    stdin=subprocess.PIPE,
+                    text=True
+                )
+                process.communicate(input=full_content)
+                return process.returncode or 0
+            except Exception:
+                # 如果分页器失败，直接输出
+                print(full_content)
+        else:
+            # 没有分页器，直接输出
+            print(full_content)
+    
+    rprint(f"\n[green]✓ 文档读取完成[/green]")
+    return 0
+
+
+def start_reader(file_path: Path, jump_options: dict = None) -> int:
+    """启动阅读器
+    
+    Args:
+        file_path: 文档文件路径
+        jump_options: 跳转选项 {'page': N, 'chapter': N, 'percent': N}
+        
+    Returns:
+        退出码
+    """
     console = Console()
+    jump_options = jump_options or {}
     
     # 1. 身份验证
     auth = AuthService()
@@ -117,10 +243,47 @@ def start_reader(file_path: Path) -> int:
         rprint(f"  标题: {reader.document.title}")
         rprint(f"  章节数: {reader.document.total_chapters}")
     rprint(f"  总页数: {reader.total_pages}")
-    rprint("\n[dim]按 ? 键查看帮助信息...[/dim]")
+    
+    # 处理跳转选项
+    jump_applied = False
+    if jump_options:
+        if 'page' in jump_options:
+            page_num = jump_options['page']
+            if reader.jump_to_page(page_num):
+                rprint(f"[cyan]✓ 已跳转到第 {page_num} 页[/cyan]")
+                jump_applied = True
+            else:
+                rprint(f"[red]✗ 无效的页码: {page_num} (共 {reader.total_pages} 页)[/red]")
+        
+        elif 'chapter' in jump_options:
+            chapter_num = jump_options['chapter']
+            if reader.document and 0 <= chapter_num < reader.document.total_chapters:
+                # 使用 paginator 获取章节的第一页
+                if reader.paginator:
+                    chapter_page = reader.paginator.get_page_by_chapter(chapter_num)
+                    if chapter_page:
+                        reader.jump_to_page(chapter_page.page_number)
+                        rprint(f"[cyan]✓ 已跳转到第 {chapter_num} 章[/cyan]")
+                        jump_applied = True
+            if not jump_applied:
+                total_ch = reader.document.total_chapters if reader.document else 0
+                rprint(f"[red]✗ 无效的章节: {chapter_num} (共 {total_ch} 章)[/red]")
+        
+        elif 'percent' in jump_options:
+            percent = jump_options['percent']
+            if 0 <= percent <= 100:
+                target_page = max(1, int(reader.total_pages * percent / 100))
+                reader.jump_to_page(target_page)
+                rprint(f"[cyan]✓ 已跳转到 {percent}% 进度 (第 {target_page} 页)[/cyan]")
+                jump_applied = True
+            else:
+                rprint(f"[red]✗ 无效的百分比: {percent} (请输入 0-100)[/red]")
+    
+    if not jump_applied:
+        rprint("\n[dim]按 ? 键查看帮助信息...[/dim]")
     
     import time
-    time.sleep(1)  # 让用户看到信息
+    time.sleep(1.5 if jump_applied else 1)  # 让用户看到信息
     
     # 4. 创建渲染器
     renderer = Renderer(console=console)

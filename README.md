@@ -59,8 +59,11 @@ pip install ibook_reader-1.0.0-py3-none-any.whl
 ### 基本用法
 
 ```bash
-# 打开一本书
+# 默认模式：直接输出全文（纯文本模式）
 ibook your_book.epub
+
+# 使用交互式UI模式
+ibook --ui your_book.epub
 
 # 打开 MOBI 文件
 ibook novel.mobi
@@ -74,10 +77,29 @@ ibook README.md
 
 ### 首次使用
 
-首次运行时，程序会提示设置密码（可选）：
+**默认模式（纯文本输出）**：
 
 ```bash
 $ ibook my_book.epub
+正在加载文档: my_book.epub...
+✓ 文档加载成功
+标题: My Book
+作者: Author Name
+章节数: 15
+
+===============================================
+
+第一章
+
+内容直接输出...
+```
+
+**UI模式（需要添加 --ui 参数）**：
+
+首次运行UI模式时，程序会提示设置密码（可选）：
+
+```bash
+$ ibook --ui my_book.epub
 请设置密码（留空跳过）: ****
 请再次输入密码: ****
 ✓ 密码设置成功
@@ -94,6 +116,8 @@ $ ibook my_book.epub
 ---
 
 ## ⌨️ 快捷键
+
+**注意**：快捷键仅在 `--ui` 模式下有效。默认的纯文本模式会直接输出全文。
 
 ### 导航操作
 
@@ -134,6 +158,10 @@ ibook [选项] [文件路径]
 |-----|------|
 | `-h`, `--help` | 显示帮助信息 |
 | `--version` | 显示版本号 |
+| `--ui` | 使用交互式UI模式（默认为纯文本模式） |
+| `--page N` | 跳转到指定页码（仅UI模式） |
+| `--chapter N` | 跳转到指定章节（仅UI模式） |
+| `--percent N` | 跳转到指定百分比进度，0-100（仅UI模式） |
 | `--clean` | 清理所有数据（配置、进度、书签） |
 | `--reset-password` | 重置密码 |
 
@@ -145,6 +173,18 @@ ibook --version
 
 # 查看帮助
 ibook --help
+
+# 使用UI模式读取文档
+ibook --ui book.epub
+
+# 从第10页开始阅读
+ibook --ui --page 10 book.epub
+
+# 从第5章开始阅读
+ibook --ui --chapter 5 book.epub
+
+# 从50%进度开始阅读
+ibook --ui --percent 50 book.epub
 
 # 重置密码
 ibook --reset-password
@@ -377,13 +417,6 @@ iBookRead/
 - [mobi](https://github.com/iscc/mobi) - MOBI格式支持
 - 所有贡献者和用户
 
----
-
-## 💬 反馈与支持
-
-- 🐛 [报告 Bug](https://github.com/yourusername/iBookRead/issues)
-- 💡 [功能建议](https://github.com/yourusername/iBookRead/issues)
-- 📧 邮箱: your.email@example.com
 
 ---
 

@@ -89,11 +89,32 @@ class EpubParser(BaseParser):
         chapters = []
         chapter_index = 0
         
-        # 获取所有文档项
-        items = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
+        # 获取所有HTML项面（包括EpubHtml和EpubItem类型的HTML文件）
+        items = []
+        
+        # 首先尝试从 spine 获取正确的阅读顺序
+        for item_id, linear in book.spine:
+            item = book.get_item_with_id(item_id)
+            if item:
+                items.append(item)
+        
+        # 如果 spine 为空，则获取所有HTML项面
+        if not items:
+            for item in book.get_items():
+                # 检查是否为HTML内容
+                if isinstance(item, epub.EpubHtml) or (
+                    hasattr(item, 'get_name') and 
+                    item.get_name().endswith(('.html', '.xhtml', '.htm'))
+                ):
+                    items.append(item)
         
         for item in items:
             try:
+                # 跳过封面和导航页面
+                item_name = item.get_name().lower()
+                if any(skip in item_name for skip in ['cover', 'nav', 'toc']):
+                    continue
+                
                 # 获取HTML内容
                 html_content = item.get_content().decode('utf-8', errors='ignore')
                 
