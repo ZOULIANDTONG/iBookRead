@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ibook-reader"
-version = "1.0.0"
-description = "命令行文档阅读工具，支持 EPUB、TXT、MOBI、Markdown 等格式"
+version = "2.0.0"
+description = "命令行文档阅读工具，支持 EPUB、TXT、MOBI、Markdown 等格式（纯文本模式）"
 authors = [{name = "iBookRead Team"}]
 readme = "README.md"
 requires-python = ">=3.8"
@@ -22,7 +22,6 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "rich>=13.0.0",
     "ebooklib>=0.18",
     "mobi>=0.3.0",
     "markdown>=3.4.0",
