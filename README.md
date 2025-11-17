@@ -124,21 +124,6 @@ ibook --page 100 book.epub
 # 从50%进度开始读到末尾
 ibook --percent 50 book.epub
 
-# 只输出10页（从第5章开始）
-ibook --chapter 5 --pages 10 book.epub
-
-# 导出到文件
-ibook book.epub > output.txt
-
-# 搜索关键词
-ibook book.epub | grep "关键词"
-
-# 统计字数
-ibook book.epub | wc -w
-
-# 查看前100行
-ibook book.epub | head -100
-
 # 设置或修改密码
 ibook --set-password
 
