@@ -29,13 +29,7 @@
 
 ## 📦 安装
 
-### 方式一：使用 pip 安装（推荐）
-
-```bash
-pip install ibook-reader
-```
-
-### 方式二：从源码安装
+### 从源码安装
 
 ```bash
 # 克隆仓库
@@ -44,12 +38,6 @@ cd iBookRead
 
 # 安装
 pip install .
-```
-
-### 方式三：使用 wheel 包安装
-
-```bash
-pip install ibook_reader-1.0.0-py3-none-any.whl
 ```
 
 ---
