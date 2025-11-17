@@ -145,18 +145,17 @@ class Paginator:
         pages = []
         page_number = start_page_number
         
-        # 将章节内容按段落分割
-        paragraphs = chapter.content.split('\n\n')
-        
+        # 按行分割内容，保留原始换行结构
+        lines = chapter.content.split('\n')
         current_lines = []
         
-        for paragraph in paragraphs:
-            # 对段落进行自动换行
-            wrapped_lines = self._wrap_paragraph(paragraph)
+        for line in lines:
+            # 对每行进行自动换行
+            wrapped_lines = self._wrap_line(line)
             
-            # 检查是否需要分页
-            for line in wrapped_lines:
-                current_lines.append(line)
+            # 将换行后的行添加到当前页
+            for wrapped_line in wrapped_lines:
+                current_lines.append(wrapped_line)
                 
                 # 如果当前页已满，创建新页
                 if len(current_lines) >= self.available_rows:
@@ -164,10 +163,6 @@ class Paginator:
                     pages.append(Page(page_content, page_number, chapter.index))
                     page_number += 1
                     current_lines = current_lines[self.available_rows:]
-            
-            # 在段落之间添加空行
-            if wrapped_lines:
-                current_lines.append('')
         
         # 创建最后一页（如果有剩余内容）
         if current_lines:
@@ -181,33 +176,27 @@ class Paginator:
         
         return pages
     
-    def _wrap_paragraph(self, paragraph: str) -> List[str]:
+    def _wrap_line(self, line: str) -> List[str]:
         """
-        对段落进行自动换行
+        对单行进行自动换行
         
         Args:
-            paragraph: 段落文本
+            line: 单行文本
             
         Returns:
             换行后的文本列表
         """
-        if not paragraph.strip():
-            return ['']
+        # 空行直接返回
+        if not line.strip():
+            return [line]
         
         lines = []
         current_line = []
         current_width = 0
         
-        # 遍历段落中的每个字符
-        for char in paragraph:
+        # 遍历行中的每个字符
+        for char in line:
             char_width = get_display_width(char)
-            
-            # 处理换行符
-            if char == '\n':
-                lines.append(''.join(current_line))
-                current_line = []
-                current_width = 0
-                continue
             
             # 检查是否需要换行
             if current_width + char_width > self.available_cols:
@@ -230,7 +219,7 @@ class Paginator:
         if current_line:
             lines.append(''.join(current_line))
         
-        return lines if lines else ['']
+        return lines if lines else [line]
     
     def get_page(self, page_number: int) -> Optional[Page]:
         """

@@ -93,19 +93,19 @@ class TestPaginator:
         assert 1 in chapter_indices
         assert 2 in chapter_indices
     
-    def test_wrap_paragraph_short(self):
-        """测试短段落换行"""
+    def test_wrap_line_short(self):
+        """测试短行换行"""
         chapters = [Chapter(0, "章节", "短内容")]
         doc = Document("文档", chapters=chapters)
         
         paginator = Paginator(doc, rows=24, cols=80)
-        wrapped = paginator._wrap_paragraph("这是一段短文本")
+        wrapped = paginator._wrap_line("这是一段短文本")
         
         assert len(wrapped) == 1
         assert wrapped[0] == "这是一段短文本"
     
-    def test_wrap_paragraph_long(self):
-        """测试长段落换行"""
+    def test_wrap_line_long(self):
+        """测试长行换行"""
         chapters = [Chapter(0, "章节", "内容")]
         doc = Document("文档", chapters=chapters)
         
@@ -113,7 +113,7 @@ class TestPaginator:
         
         # 创建超过40列宽度的文本
         long_text = "这是一段很长的文本内容" * 10
-        wrapped = paginator._wrap_paragraph(long_text)
+        wrapped = paginator._wrap_line(long_text)
         
         # 应该被分成多行
         assert len(wrapped) > 1
@@ -123,18 +123,16 @@ class TestPaginator:
         for line in wrapped:
             assert get_display_width(line) <= paginator.available_cols
     
-    def test_wrap_paragraph_with_newline(self):
-        """测试包含换行符的段落"""
+    def test_wrap_line_empty(self):
+        """测试空行换行"""
         chapters = [Chapter(0, "章节", "内容")]
         doc = Document("文档", chapters=chapters)
         
         paginator = Paginator(doc, rows=24, cols=80)
-        wrapped = paginator._wrap_paragraph("第一行\n第二行\n第三行")
+        wrapped = paginator._wrap_line("")
         
-        assert len(wrapped) == 3
-        assert wrapped[0] == "第一行"
-        assert wrapped[1] == "第二行"
-        assert wrapped[2] == "第三行"
+        assert len(wrapped) == 1
+        assert wrapped[0] == ""
     
     def test_get_page(self):
         """测试获取页面"""

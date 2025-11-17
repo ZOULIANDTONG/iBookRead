@@ -92,39 +92,42 @@ class MarkdownParser(BaseParser):
     def _split_chapters(self, content: str) -> list[Chapter]:
         """
         按一级标题分割章节
-        
+
         Args:
             content: 文档内容
-            
+
         Returns:
             章节列表
         """
         chapters = []
-        
+
         # 匹配一级标题（# 开头，后面跟空格或标题内容）
         h1_pattern = re.compile(r'^#\s+(.+?)$', re.MULTILINE)
-        
+
         # 找到所有一级标题
         matches = list(h1_pattern.finditer(content))
-        
+
         if not matches:
             # 没有一级标题，返回空列表
             return []
-        
+
         # 按标题分割内容
         for i, match in enumerate(matches):
             title = match.group(1).strip()
             start_pos = match.start()
-            
+
             # 确定章节内容的结束位置
             if i < len(matches) - 1:
                 end_pos = matches[i + 1].start()
             else:
                 end_pos = len(content)
-            
+
             # 提取章节内容（不包含标题行）
             chapter_content = content[match.end():end_pos].strip()
-            
+
+            # 清理每行的前导空格（移除 Markdown 中的缩进）
+            chapter_content = self._clean_indentation(chapter_content)
+
             # 创建章节
             chapter = Chapter(
                 index=i,
@@ -133,23 +136,54 @@ class MarkdownParser(BaseParser):
                 start_position=start_pos
             )
             chapters.append(chapter)
-        
+
         return chapters
     
+    def _clean_indentation(self, content: str) -> str:
+        """
+        清理内容中的前导空格/缩进，并压缩多余的空行
+
+        Args:
+            content: 原始内容
+
+        Returns:
+            清理后的内容
+        """
+        lines = content.split('\n')
+        cleaned_lines = []
+        prev_empty = False
+
+        for line in lines:
+            # 移除每行的前导空格
+            if line.strip():
+                cleaned_lines.append(line.lstrip())
+                prev_empty = False
+            else:
+                # 压缩连续的空行：只保留一个空行
+                if not prev_empty:
+                    cleaned_lines.append('')
+                    prev_empty = True
+
+        # 移除末尾的空行
+        while cleaned_lines and cleaned_lines[-1] == '':
+            cleaned_lines.pop()
+
+        return '\n'.join(cleaned_lines)
+
     @classmethod
     def can_parse(cls, file_path: Path) -> bool:
         """
         判断是否可以解析该文件
-        
+
         Args:
             file_path: 文件路径
-            
+
         Returns:
             是否可以解析
         """
         if not file_path.exists():
             return False
-        
+
         # 检查扩展名
         ext = file_path.suffix.lower()
         return ext in ['.md', '.markdown']

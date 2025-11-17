@@ -25,32 +25,36 @@ class ProgressService:
     def load_progress(self, file_path: Path) -> Optional[ReadingProgress]:
         """
         加载文档的阅读进度
-        
+
         Args:
             file_path: 文档文件路径
-            
+
         Returns:
             阅读进度对象，如果不存在返回None
         """
         file_hash = get_file_hash(file_path)
-        
+
         # 读取进度文件
         data = read_json_file(self.config.progress_file)
         if not data or 'documents' not in data:
             return None
-        
+
+        # 将输入路径转换为绝对路径用于比较
+        absolute_file_path = file_path.resolve()
+
         # 查找匹配的进度记录
         for doc_data in data['documents']:
             if doc_data.get('file_hash') == file_hash:
                 try:
                     progress = ReadingProgress.from_dict(doc_data)
-                    
-                    # 验证文件路径是否匹配
-                    if Path(progress.file_path) == file_path:
+
+                    # 验证文件路径是否匹配（比较绝对路径）
+                    saved_path = Path(progress.file_path).resolve()
+                    if saved_path == absolute_file_path:
                         return progress
                 except (KeyError, ValueError):
                     continue
-        
+
         return None
     
     def save_progress(self, progress: ReadingProgress) -> None:
@@ -103,9 +107,12 @@ class ProgressService:
             阅读进度对象
         """
         file_hash = get_file_hash(file_path)
-        
+
+        # 始终保存绝对路径，确保在不同目录下也能匹配
+        absolute_path = file_path.resolve()
+
         progress = ReadingProgress(
-            file_path=str(file_path),
+            file_path=str(absolute_path),
             file_hash=file_hash,
             file_name=file_path.name,
             current_page=current_page,

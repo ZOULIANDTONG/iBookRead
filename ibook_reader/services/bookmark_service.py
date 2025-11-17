@@ -68,9 +68,12 @@ class BookmarkService:
         """
         file_hash = get_file_hash(file_path)
         bookmark_file = self.config.get_bookmark_file(file_hash)
-        
+
+        # 使用绝对路径保存
+        absolute_path = file_path.resolve()
+
         data = {
-            'file_path': str(file_path),
+            'file_path': str(absolute_path),
             'file_name': file_path.name,
             'file_hash': file_hash,
             'bookmarks': [bookmark.to_dict() for bookmark in bookmarks]
