@@ -4,6 +4,7 @@ import argparse
 import sys
 import subprocess
 import shutil
+import signal
 from pathlib import Path
 from typing import Optional
 
@@ -11,6 +12,9 @@ from .config import Config
 from .services.auth_service import AuthService
 from .services.reader_service import ReaderService
 from .parsers.factory import ParserFactory
+
+# 忽略 SIGPIPE 信号，避免管道关闭时的错误
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
 def main():
@@ -148,27 +152,28 @@ def start_reader(file_path: Path, jump_options: dict = None, no_password: bool =
             print("密码验证失败，退出程序", file=sys.stderr)
             return 1
 
-    # 2. 加载文档
-    print(f"正在加载文档: {file_path.name}...", file=sys.stderr)
+    # 2. 加载文档（静默模式，仅在出错时显示信息）
+    # print(f"正在加载文档: {file_path.name}...", file=sys.stderr)
 
     # 创建解析器
     doc_parser = ParserFactory.create_parser(file_path)
     if doc_parser is None:
-        print(f"无法解析文档格式: {file_path}", file=sys.stderr)
+        print(f"错误：无法解析文档格式: {file_path}", file=sys.stderr)
         return 1
 
     # 解析文档
     try:
         document = doc_parser.parse()
     except Exception as e:
-        print(f"解析文档失败: {e}", file=sys.stderr)
+        print(f"错误：解析文档失败: {e}", file=sys.stderr)
         return 1
 
-    print(f"✓ 文档加载成功", file=sys.stderr)
-    print(f"  标题: {document.title}", file=sys.stderr)
-    if document.author:
-        print(f"  作者: {document.author}", file=sys.stderr)
-    print(f"  章节数: {document.total_chapters}", file=sys.stderr)
+    # 成功加载后不显示任何信息
+    # print(f"✓ 文档加载成功", file=sys.stderr)
+    # print(f"  标题: {document.title}", file=sys.stderr)
+    # if document.author:
+    #     print(f"  作者: {document.author}", file=sys.stderr)
+    # print(f"  章节数: {document.total_chapters}", file=sys.stderr)
 
     # 3. 处理跳转和输出
     if jump_options:
@@ -188,7 +193,8 @@ def output_full_document(document) -> int:
     Returns:
         退出码
     """
-    print(f"\n{'=' * 80}\n", file=sys.stderr)
+    # 不显示分隔线
+    # print(f"\n{'=' * 80}\n", file=sys.stderr)
 
     # 构建所有内容
     content_lines = []
@@ -232,7 +238,8 @@ def output_full_document(document) -> int:
             # 没有分页器，直接输出
             print(full_content)
 
-    print(f"\n✓ 文档读取完成", file=sys.stderr)
+    # 不显示完成信息
+    # print(f"\n✓ 文档读取完成", file=sys.stderr)
     return 0
 
 
@@ -259,7 +266,8 @@ def output_with_jump(document, file_path: Path, jump_options: dict) -> int:
     reader.total_pages = reader.paginator.get_total_pages()
     reader.current_page = 1
 
-    print(f"  总页数: {reader.total_pages}", file=sys.stderr)
+    # 不显示详细信息
+    # print(f"  总页数: {reader.total_pages}", file=sys.stderr)
 
     # 处理跳转
     start_page = 1
@@ -267,9 +275,10 @@ def output_with_jump(document, file_path: Path, jump_options: dict) -> int:
         page_num = jump_options['page']
         if 1 <= page_num <= reader.total_pages:
             start_page = page_num
-            print(f"✓ 跳转到第 {page_num} 页", file=sys.stderr)
+            # 不显示跳转信息
+            # print(f"✓ 跳转到第 {page_num} 页", file=sys.stderr)
         else:
-            print(f"✗ 无效的页码: {page_num} (共 {reader.total_pages} 页)", file=sys.stderr)
+            print(f"✗ 错误：无效的页码: {page_num} (共 {reader.total_pages} 页)", file=sys.stderr)
             return 1
 
     elif 'chapter' in jump_options:
@@ -278,63 +287,79 @@ def output_with_jump(document, file_path: Path, jump_options: dict) -> int:
             chapter_page = reader.paginator.get_page_by_chapter(chapter_num)
             if chapter_page:
                 start_page = chapter_page.page_number
-                print(f"✓ 跳转到第 {chapter_num} 章", file=sys.stderr)
+                # 不显示跳转信息
+                # print(f"✓ 跳转到第 {chapter_num} 章", file=sys.stderr)
             else:
-                print(f"✗ 无法跳转到章节: {chapter_num}", file=sys.stderr)
+                print(f"✗ 错误：无法跳转到章节: {chapter_num}", file=sys.stderr)
                 return 1
         else:
-            print(f"✗ 无效的章节: {chapter_num} (共 {document.total_chapters} 章)", file=sys.stderr)
+            print(f"✗ 错误：无效的章节: {chapter_num} (共 {document.total_chapters} 章)", file=sys.stderr)
             return 1
 
     elif 'percent' in jump_options:
         percent = jump_options['percent']
         if 0 <= percent <= 100:
             start_page = max(1, int(reader.total_pages * percent / 100))
-            print(f"✓ 跳转到 {percent}% 进度 (第 {start_page} 页)", file=sys.stderr)
+            # 不显示跳转信息
+            # print(f"✓ 跳转到 {percent}% 进度 (第 {start_page} 页)", file=sys.stderr)
         else:
-            print(f"✗ 无效的百分比: {percent} (请输入 0-100)", file=sys.stderr)
+            print(f"✗ 错误：无效的百分比: {percent} (请输入 0-100)", file=sys.stderr)
             return 1
 
-    # 确定输出的页数
-    pages_to_output = jump_options.get('pages', reader.total_pages - start_page + 1)
-    end_page = min(start_page + pages_to_output - 1, reader.total_pages)
+    # 确定输出的页数 - 默认输出到文档末尾
+    if 'pages' in jump_options:
+        # 如果明确指定了页数，只输出指定数量
+        pages_to_output = jump_options['pages']
+        end_page = min(start_page + pages_to_output - 1, reader.total_pages)
+    else:
+        # 否则输出从起始页到文档末尾的所有内容
+        end_page = reader.total_pages
 
-    print(f"  输出范围: 第 {start_page} 页 到 第 {end_page} 页\n", file=sys.stderr)
-    print(f"{'=' * 80}\n", file=sys.stderr)
+    # 不显示输出范围
+    # print(f"  输出范围: 第 {start_page} 页 到 第 {end_page} 页 (共 {end_page - start_page + 1} 页)\n", file=sys.stderr)
+    # print(f"{'=' * 80}\n", file=sys.stderr)
 
-    # 输出指定范围的内容
-    content_lines = []
-    for page_num in range(start_page, end_page + 1):
-        page = reader.paginator.get_page(page_num)
-        if page:
-            # 如果是章节的第一页，添加章节标题
-            if page_num == 1 or (page_num > 1 and
-                reader.paginator.get_page(page_num - 1).chapter_index != page.chapter_index):
+    # 批量获取所有页面（优化性能）
+    all_pages = reader.paginator.paginate()
+    
+    # 检查是否使用管道或重定向（流式输出）
+    use_pager = sys.stdout.isatty()
+    
+    if use_pager:
+        # 终端输出，使用分页器，需要先构建完整内容
+        content_lines = []
+        prev_chapter_index = -1
+        
+        for page_num in range(start_page, end_page + 1):
+            if page_num < 1 or page_num > len(all_pages):
+                continue
+                
+            page = all_pages[page_num - 1]
+            
+            if page.chapter_index != prev_chapter_index:
                 chapter = document.get_chapter(page.chapter_index)
                 if chapter:
-                    content_lines.append(f"\n{'=' * 80}")
+                    if content_lines:
+                        content_lines.append("")
+                    content_lines.append(f"{'=' * 80}")
                     content_lines.append(f"{chapter.title}")
-                    content_lines.append(f"{'=' * 80}\n")
+                    content_lines.append(f"{'=' * 80}")
+                    content_lines.append("")
+                prev_chapter_index = page.chapter_index
 
-            # 添加页面内容
             content_lines.append(page.content)
 
-            # 页面分隔符（如果不是最后一页）
-            if page_num < end_page:
-                content_lines.append(f"\n{'-' * 80}")
-                content_lines.append(f"第 {page_num} 页 / 共 {reader.total_pages} 页")
-                content_lines.append(f"{'-' * 80}\n")
-
-    output_content = '\n'.join(content_lines)
-
-    # 输出内容
-    if not sys.stdout.isatty():
-        # 管道或重定向，直接输出
-        print(output_content)
-    else:
-        # 终端输出，使用分页器
+            if page_num < end_page and page_num < len(all_pages):
+                next_page = all_pages[page_num]
+                if next_page.chapter_index == page.chapter_index:
+                    content_lines.append(f"\n{'-' * 80}")
+                    content_lines.append(f"第 {page_num} 页 / 共 {reader.total_pages} 页")
+                    content_lines.append(f"{'-' * 80}\n")
+        
+        output_content = '\n'.join(content_lines)
+        
+        # 使用分页器
         pager = shutil.which('less') or shutil.which('more')
-
         if pager:
             try:
                 process = subprocess.Popen(
@@ -348,8 +373,45 @@ def output_with_jump(document, file_path: Path, jump_options: dict) -> int:
                 print(output_content)
         else:
             print(output_content)
+    else:
+        # 管道或重定向，流式输出（避免占用大量内存）
+        prev_chapter_index = -1
+        
+        try:
+            for page_num in range(start_page, end_page + 1):
+                if page_num < 1 or page_num > len(all_pages):
+                    continue
+                    
+                page = all_pages[page_num - 1]
+                
+                # 输出章节标题
+                if page.chapter_index != prev_chapter_index:
+                    chapter = document.get_chapter(page.chapter_index)
+                    if chapter:
+                        if prev_chapter_index != -1:  # 不是第一个章节
+                            print()  # 空行分隔
+                        print(f"{'=' * 80}")
+                        print(f"{chapter.title}")
+                        print(f"{'=' * 80}")
+                        print()
+                    prev_chapter_index = page.chapter_index
 
-    print(f"\n✓ 内容输出完成", file=sys.stderr)
+                # 输出页面内容
+                print(page.content)
+
+                # 输出页面分隔符
+                if page_num < end_page and page_num < len(all_pages):
+                    next_page = all_pages[page_num]
+                    if next_page.chapter_index == page.chapter_index:
+                        print(f"\n{'-' * 80}")
+                        print(f"第 {page_num} 页 / 共 {reader.total_pages} 页")
+                        print(f"{'-' * 80}\n")
+        except BrokenPipeError:
+            # 管道关闭是正常的（例如 head 命令），静默忽略
+            pass
+
+    # 不显示完成信息
+    # print(f"\n✓ 内容输出完成", file=sys.stderr)
     return 0
 
 
