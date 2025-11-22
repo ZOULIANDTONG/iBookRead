@@ -62,7 +62,7 @@ class InteractivePager:
 
         # 显示状态栏
         percentage = int((end_line / self.total_lines) * 100) if self.total_lines > 0 else 100
-        status = f"\033[7m {self.current_line + 1}-{end_line}/{self.total_lines} ({percentage}%) | 空格/b:翻页 j/k:滚动 g/G:首/尾 q:退出 \033[0m"
+        status = f"\033[7m {self.current_line + 1}-{end_line}/{self.total_lines} ({percentage}%) | b:上一页/space:下一页 k:上一行/j:下一行 g:首/G:尾 q:退出 \033[0m"
         sys.stdout.write(status)
         sys.stdout.flush()
 
